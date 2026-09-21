@@ -51,8 +51,7 @@ namespace glabels::model
         ///
         /// Static data
         ///
-        QImage ModelImageObject::smDefaultImage( ":images/checkerboard.png" );
-
+        QImage ModelImageObject::smDefaultImage;
 
         ///
         /// Constructor
@@ -413,6 +412,15 @@ namespace glabels::model
 
                 if ( inEditor && (mFilenameNode.isField() || (mImage.isNull() && mSvg.isEmpty()) ) )
                 {
+                        //
+                        // Load the placeholder after QApplication has initialized
+                        // Qt's dynamic image-format plugin system.
+                        //
+                        if ( smDefaultImage.isNull() )
+                        {
+                                smDefaultImage.load( ":images/checkerboard.png" );
+                        }
+
                         //
                         // Render default place holder image
                         //

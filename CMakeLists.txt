@@ -19,8 +19,8 @@ set (ORGANIZATION_DOMAIN "glabels.org")
 set (APPLICATION_NAME "glabels-qt")
 set (DESKTOP_FILE_NAME "org.glabels.glabels-qt")
 
-set (WEBSITE  "glabels.org")
-set (BUG_WEBSITE  "https://github.com/j-evins/glabels-qt/issues")
+set (WEBSITE "glabels.org")
+set (BUG_WEBSITE "https://github.com/j-evins/glabels-qt/issues")
 
 execute_process(
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -32,7 +32,7 @@ execute_process(
 if (NOT ${BRANCH_VALID} STREQUAL "0")
   set (BRANCH "Unkonwn")
 endif ()
-  
+
 execute_process(
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   COMMAND git rev-list --count ${BRANCH}
@@ -43,7 +43,7 @@ execute_process(
 if (NOT ${COMMIT_COUNT_VALID} STREQUAL "0")
   set (COMMIT_COUNT "?")
 endif ()
-  
+
 execute_process(
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   COMMAND git show-ref --head --hash --abbrev head
@@ -54,7 +54,7 @@ execute_process(
 if (NOT ${COMMIT_HASH_VALID} STREQUAL "0")
   set (COMMIT_HASH "exported")
 endif ()
-  
+
 execute_process(
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   COMMAND git rev-list -1 --no-commit-header --format=%cs HEAD
@@ -67,12 +67,12 @@ if (NOT ${COMMIT_DATE_VALID} STREQUAL "0")
 endif ()
 
 # Uncomment for snapshots, comment for releases
-set(VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}-${BRANCH}${COMMIT_COUNT}")
+set (VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}-${BRANCH}${COMMIT_COUNT}")
 
 # Uncomment for releases, comment for snapshots
-#set(VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+#set (VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
-set(LONG_VERSION_STRING "${VERSION_STRING} (${COMMIT_HASH} ${COMMIT_DATE})")
+set (LONG_VERSION_STRING "${VERSION_STRING} (${COMMIT_HASH} ${COMMIT_DATE})")
 
 # Auto-generate version file
 configure_file (VERSION.txt.in VERSION.txt @ONLY)
@@ -108,19 +108,44 @@ include (CPack)
 # Dependencies
 #=======================================
 if (MINGW)
-   # Locate MINGW directories
-   string (REPLACE "/g++.exe" "" MINGW_BIN_DIR  ${CMAKE_CXX_COMPILER})
-   string (REPLACE "/bin"     "" MINGW_BASE_DIR ${MINGW_BIN_DIR})
+   # Locate MinGW directories without assuming the compiler is named g++.exe.
+   get_filename_component (
+     MINGW_BIN_DIR
+     "${CMAKE_CXX_COMPILER}"
+     DIRECTORY
+   )
 
-   # Make sure we can find MINGW libraries, e.g. zlib
-   set (CMAKE_PREFIX_PATH ${MINGW_BASE_DIR} )
+   get_filename_component (
+     MINGW_BASE_DIR
+     "${MINGW_BIN_DIR}"
+     DIRECTORY
+   )
+
+   # Make sure we can find MinGW libraries, e.g. zlib.
+   set (CMAKE_PREFIX_PATH ${MINGW_BASE_DIR})
 endif ()
 
-find_package (Qt6 6.2 REQUIRED COMPONENTS Concurrent Core Gui Widgets PrintSupport Xml Svg LinguistTools Test)
+find_package (
+  Qt6 6.2 REQUIRED
+  COMPONENTS
+    Concurrent
+    Core
+    Gui
+    Widgets
+    PrintSupport
+    Xml
+    Svg
+    LinguistTools
+    Test
+)
 
 if (WIN32)
-   # Locate Qt directories
-   execute_process (COMMAND qtpaths --install-prefix OUTPUT_VARIABLE QT_BASE_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+   # Locate Qt directories.
+   execute_process (
+     COMMAND qtpaths --install-prefix
+     OUTPUT_VARIABLE QT_BASE_DIR
+     OUTPUT_STRIP_TRAILING_WHITESPACE
+   )
    set (QT_BIN_DIR ${QT_BASE_DIR}/bin)
 endif ()
 
@@ -131,8 +156,6 @@ find_package (ZLIB 1.2 QUIET)
 find_package (GnuBarcode 0.98 QUIET)
 find_package (LibQrencode 3.4 QUIET)
 find_package (LibZint 2.15 QUIET)
-# Unit testing support
-find_package (Qt5Test 5.6 QUIET)
 
 
 #=======================================
@@ -140,23 +163,23 @@ find_package (Qt5Test 5.6 QUIET)
 #=======================================
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
    #
-   # Uncomment to compile everything with aggressively pedantic options
-   # (not recommended -- only for testing)
+   # Uncomment to compile everything with aggressively pedantic options.
+   # Not recommended except for testing.
    #
    #add_compile_options("-Wall" "-Wextra" "-Wpedantic" "-Wno-unused-parameter" "-Werror")
 
-   # Uncomment to always compile with debug symbols
+   # Always compile with debug symbols.
    add_compile_options("-g")
 endif ()
 
-if (${CMAKE_CXX_COMPILER_ID} MATCHES "^.*Clang$")  # "Clang", "AppleClang", etc.
+if (${CMAKE_CXX_COMPILER_ID} MATCHES "^.*Clang$")
    #
-   # Uncomment to compile everything with aggressively pedantic options
-   # (not recommended -- only for testing)
+   # Uncomment to compile everything with aggressively pedantic options.
+   # Not recommended except for testing.
    #
    #add_compile_options("-Wall" "-Wextra" "-Wpedantic" "-Wno-unused-parameter" "-Werror")
 
-   # Uncomment to always compile with debug symbols
+   # Always compile with debug symbols.
    add_compile_options("-g")
 endif ()
 
@@ -199,44 +222,44 @@ message (STATUS "Qt version .............. " ${Qt6Core_VERSION})
 
 if (ZLIB_FOUND)
   message (STATUS "zlib (optional).......... " ${ZLIB_VERSION_STRING})
-else (ZLIB_FOUND)
+else ()
   message (STATUS "zlib (optional).......... No.")
-endif (ZLIB_FOUND)
+endif ()
 
 if (GNUBARCODE_FOUND)
   message (STATUS "GNU Barcode (optional)... " ${GNUBARCODE_VERSION_STRING})
-else (GNUBARCODE_FOUND)
+else ()
   message (STATUS "GNU Barcode (optional)... No.")
-endif (GNUBARCODE_FOUND)
+endif ()
 
 if (LIBQRENCODE_FOUND)
   message (STATUS "qrencode (optional)...... " ${LIBQRENCODE_VERSION_STRING})
-else (LIBQRENCODE_FOUND)
+else ()
   message (STATUS "qrencode (optional)...... No.")
-endif (LIBQRENCODE_FOUND)
+endif ()
 
 if (LIBZINT_FOUND)
   message (STATUS "libzint (optional)....... " ${LIBZINT_VERSION_STRING})
-else (LIBZINT_FOUND)
+else ()
   message (STATUS "libzint (optional)....... No.")
-endif (LIBZINT_FOUND)
+endif ()
 
 if (MSVC)
    message (STATUS "MSVC Qt location ........ " ${QT_BASE_DIR})
-endif (MSVC)
+endif ()
 
 if (MINGW)
    message (STATUS "MinGW location .......... " ${MINGW_BASE_DIR})
+   message (STATUS "MinGW bin location ...... " ${MINGW_BIN_DIR})
    message (STATUS "MinGW Qt location ....... " ${QT_BASE_DIR})
-endif (MINGW)
+endif ()
 
 message (STATUS "")
 
 #
-# Uncomment to print all CMake variables
+# Uncomment to print all CMake variables.
 #
-# get_cmake_property(_variableNames VARIABLES)
+# get_cmake_property (_variableNames VARIABLES)
 # foreach (_variableName ${_variableNames})
-#   message(STATUS "${_variableName}=${${_variableName}}")
-# endforeach()
-  
+#   message (STATUS "${_variableName}=${${_variableName}}")
+# endforeach ()

@@ -122,9 +122,10 @@ if (WIN32)
   set (glabels_win_rc glabels.rc)
 endif ()
 
-#=====================================
+
+#=======================================
 # Target
-#=====================================
+#=======================================
 add_executable (glabels-qt WIN32
   ${glabels_sources}
   ${glabels_moc_sources}
@@ -138,7 +139,9 @@ target_compile_features (glabels-qt
 )
 
 target_include_directories (glabels-qt
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 target_link_libraries (glabels-qt
@@ -147,81 +150,158 @@ target_link_libraries (glabels-qt
   Qt6::Widgets
 )
 
+
 #=======================================
 # Install
 #=======================================
-install (TARGETS glabels-qt RUNTIME DESTINATION bin)
+install (
+  TARGETS glabels-qt
+  RUNTIME DESTINATION bin
+)
 
-install (FILES icons/glabels-flat/scalable/apps/glabels.svg DESTINATION share/icons/hicolor/scalable/apps)
-install (FILES icons/glabels-flat/16x16/apps/glabels.svg    DESTINATION share/icons/hicolor/16x16/apps)
-install (FILES icons/glabels-flat/22x22/apps/glabels.svg    DESTINATION share/icons/hicolor/22x22/apps)
-install (FILES icons/glabels-flat/32x32/apps/glabels.svg    DESTINATION share/icons/hicolor/32x32/apps)
-install (FILES icons/glabels-flat/48x48/apps/glabels.svg    DESTINATION share/icons/hicolor/48x48/apps)
+install (
+  FILES icons/glabels-flat/scalable/apps/glabels.svg
+  DESTINATION share/icons/hicolor/scalable/apps
+)
 
-install (FILES icons/mimetypes/scalable/x-glabels-project.svg DESTINATION share/icons/hicolor/scalable/mimetypes)
-install (FILES icons/mimetypes/16x16/x-glabels-project.svg    DESTINATION share/icons/hicolor/16x16/mimetypes)
-install (FILES icons/mimetypes/22x22/x-glabels-project.svg    DESTINATION share/icons/hicolor/22x22/mimetypes)
-install (FILES icons/mimetypes/24x24/x-glabels-project.svg    DESTINATION share/icons/hicolor/24x24/mimetypes)
+install (
+  FILES icons/glabels-flat/16x16/apps/glabels.svg
+  DESTINATION share/icons/hicolor/16x16/apps
+)
 
-#
+install (
+  FILES icons/glabels-flat/22x22/apps/glabels.svg
+  DESTINATION share/icons/hicolor/22x22/apps
+)
+
+install (
+  FILES icons/glabels-flat/32x32/apps/glabels.svg
+  DESTINATION share/icons/hicolor/32x32/apps
+)
+
+install (
+  FILES icons/glabels-flat/48x48/apps/glabels.svg
+  DESTINATION share/icons/hicolor/48x48/apps
+)
+
+install (
+  FILES icons/mimetypes/scalable/x-glabels-project.svg
+  DESTINATION share/icons/hicolor/scalable/mimetypes
+)
+
+install (
+  FILES icons/mimetypes/16x16/x-glabels-project.svg
+  DESTINATION share/icons/hicolor/16x16/mimetypes
+)
+
+install (
+  FILES icons/mimetypes/22x22/x-glabels-project.svg
+  DESTINATION share/icons/hicolor/22x22/mimetypes
+)
+
+install (
+  FILES icons/mimetypes/24x24/x-glabels-project.svg
+  DESTINATION share/icons/hicolor/24x24/mimetypes
+)
+
+
+#=======================================
 # Windows Runtime
-#
+#=======================================
 if (WIN32)
 
-    find_program (WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${QT_BIN_DIR}")
+  find_program (
+    WINDEPLOYQT_EXECUTABLE
+    windeployqt
+    HINTS "${QT_BIN_DIR}"
+    REQUIRED
+  )
 
+  #
+  # Visual Studio toolchain
+  #
+  if (MSVC)
+
+    # Run windeployqt immediately after building the application.
+    add_custom_command (
+      TARGET glabels-qt
+      POST_BUILD
+      COMMAND
+        "${CMAKE_COMMAND}" -E env
+        "PATH=${QT_BIN_DIR}"
+        "${WINDEPLOYQT_EXECUTABLE}"
+        --verbose 0
+        --no-compiler-runtime
+        --no-opengl-sw
+        "$<TARGET_FILE:glabels-qt>"
+      VERBATIM
+    )
+
+    # Visual Studio uses a multi-configuration output directory.
+    install (
+      DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
+      DESTINATION bin
+      FILES_MATCHING
+        PATTERN "CMakeFiles" EXCLUDE
+        PATTERN "*.dll"
+        PATTERN "*.qm"
+    )
+
+    # Install the required Microsoft runtime libraries.
+    set (CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
+    include (InstallRequiredSystemLibraries)
+
+  endif ()
+
+
+  #
+  # MSYS/MinGW toolchain
+  #
+  if (MINGW)
+
+    # Let windeployqt deploy the compiler runtime matching the active
+    # MinGW toolchain. For this 64-bit toolchain, that includes:
     #
-    # Visual Studio toolchain
+    #   libgcc_s_seh-1.dll
+    #   libstdc++-6.dll
+    #   libwinpthread-1.dll
     #
-    if (MSVC)
-        # Run windeployqt immediately after build
-        add_custom_command (TARGET glabels-qt POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E
-                env PATH="${QT_BIN_DIR}" "${WINDEPLOYQT_EXECUTABLE}"
-                    --verbose 0
-                    --no-compiler-runtime
-                    --no-opengl-sw
-                    \"$<TARGET_FILE:glabels-qt>\"
-        )
+    # Do not use --no-compiler-runtime here.
+    add_custom_command (
+      TARGET glabels-qt
+      POST_BUILD
+      COMMAND
+        "${CMAKE_COMMAND}" -E env
+        "PATH=${QT_BIN_DIR}"
+        "${WINDEPLOYQT_EXECUTABLE}"
+        --verbose 0
+        --release
+        --no-opengl-sw
+        "$<TARGET_FILE:glabels-qt>"
+      VERBATIM
+    )
 
-      # Install files staged by windeployqt
-        install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/ DESTINATION bin
-                 FILES_MATCHING PATTERN *.dll PATTERN *.qm)
-
-        # Install necessary system libraries
-        set (CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
-        include (InstallRequiredSystemLibraries)
-    endif (MSVC)
-
+    # Ninja is a single-configuration generator. windeployqt stages the
+    # DLLs and plugin directories directly beside glabels-qt.exe in
+    # CMAKE_CURRENT_BINARY_DIR.
     #
-    # MSYS/MINGW toolchain
+    # FILES_MATCHING searches recursively, preserving directories such as:
     #
-    if (MINGW)
-        # Run windeployqt immediately after build
-        add_custom_command (TARGET glabels-qt POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E
-                env PATH="${QT_BIN_DIR}" "${WINDEPLOYQT_EXECUTABLE}"
-                    --verbose 0
-                    --release
-                    --no-compiler-runtime
-                    --no-opengl-sw
-                    \"$<TARGET_FILE:glabels-qt>\"
-        )
+    #   imageformats/qjpeg.dll
+    #   platforms/qwindows.dll
+    #   styles/qwindowsvistastyle.dll
+    #   iconengines/qsvgicon.dll
+    #   tls/*.dll
+    #
+    install (
+      DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/"
+      DESTINATION bin
+      FILES_MATCHING
+        PATTERN "CMakeFiles" EXCLUDE
+        PATTERN "*.dll"
+        PATTERN "*.qm"
+    )
 
-        # Install files staged by windeployqt
-        install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/ DESTINATION bin
-                 FILES_MATCHING PATTERN *.dll PATTERN *.qm)
+  endif ()
 
-        # Install necessary system libraries
-        install (FILES
-            ${QT_BIN_DIR}/libgcc_s_dw2-1.dll
-            ${QT_BIN_DIR}/libstdc++-6.dll
-            ${QT_BIN_DIR}/libwinpthread-1.dll
-            DESTINATION bin
-        )
-        if (ZLIB_FOUND)
-          install (FILES ${MINGW_BIN_DIR}/zlib1.dll DESTINATION bin)
-        endif ()
-    endif (MINGW)
-
-endif (WIN32)
+endif ()
