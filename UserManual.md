@@ -92,12 +92,12 @@ Enter the physical width and height of one label.
 For example, for a label measuring **5.710 cm × 13.05 cm**, enter:
 
 - **Width:** 5.710 cm
-- **Height:** 13.05 cm
+- **Height:** 14.05 cm
 
 Depending on the selected measurement unit, the same dimensions may be entered as:
 
 - **Width:** 57.10 mm
-- **Height:** 130.50 mm
+- **Height:** 140.50 mm
 
 **For our case,** use 0 for Margin(x) and (y).
 
