@@ -80,7 +80,7 @@ docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/wor
 docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'rm -rf /workspace/out/windows-mingw/dist && wine C:/Qt/Tools/CMake_64/bin/cmake.exe --install Z:/workspace/out/windows-mingw/glabels --prefix Z:/workspace/out/windows-mingw/dist'
 
 # launch the refreshed installed executable and inspect glabels-image-loader.log.
-
+Remove-Item '.\out\windows-mingw\dist\bin\glabels-image-loader.log' -ErrorAction SilentlyContinue; & '.\out\windows-mingw\dist\bin\glabels-qt.exe'
 ```
 
 ## Download

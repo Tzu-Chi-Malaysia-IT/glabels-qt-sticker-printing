@@ -56,7 +56,7 @@ namespace glabels::model
         ///
         /// Static data
         ///
-        QImage ModelImageObject::smDefaultImage( ":images/checkerboard.png" );
+        QImage ModelImageObject::smDefaultImage;
 
 
         ///
