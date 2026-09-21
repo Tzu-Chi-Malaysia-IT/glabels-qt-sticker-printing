@@ -28,7 +28,10 @@
 #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
+#include <QCoreApplication>
 #include <QImage>
+#include <QImageReader>
+#include <QTextStream>
 #include <QPen>
 
 
@@ -557,47 +560,139 @@ namespace glabels::model
         /// Read an image or svg file
         ///
         bool ModelImageObject::readImageFile( const QString& fileName,
-                                              QImage&        image,
-                                              QByteArray&    svg ) const
+                                        QImage&        image,
+                                        QByteArray&    svg ) const
         {
-                image = QImage(); // clear
+                image = QImage();
                 svg.clear();
 
-                if ( !fileName.isEmpty() )
-                {
-                        QFileInfo fileInfo( fileName );
-                        if ( fileInfo.isRelative() )
-                        {
-                                // Look for image file relative to project file 1st then CWD 2nd
-                                auto* model = dynamic_cast<Model*>( parent() );
-                                QDir::setSearchPaths( "images", {model ? model->dirPath() : "", QDir::currentPath()} );
-                                fileInfo.setFile( QString("images:") + fileName );
-                        }
+                const QString logPath =
+                        QCoreApplication::applicationDirPath()
+                        + "/glabels-image-loader.log";
 
-                        if ( fileInfo.isReadable() )
-                        {
-                                if ( fileInfo.suffix().toLower() == "svg" )
-                                {
-                                        QFile file( fileInfo.filePath() );
-                                        if ( file.open( QFile::ReadOnly ) )
-                                        {
-                                                svg = file.readAll();
-                                                file.close();
-                                                QSvgRenderer renderer( svg );
-                                                if ( !renderer.isValid() )
-                                                {
-                                                        svg.clear();
-                                                }
-                                        }
-                                }
-                                else
-                                {
-                                        image = QImage( fileInfo.filePath() );
-                                }
-                        }
+                QFile logFile( logPath );
+                logFile.open( QFile::WriteOnly | QFile::Append | QFile::Text );
+                QTextStream log( &logFile );
+
+                log << "Requested image: " << fileName << Qt::endl;
+                log << "Application directory: "
+                << QCoreApplication::applicationDirPath()
+                << Qt::endl;
+
+                log << "Qt plugin paths:" << Qt::endl;
+                for ( const QString& path : QCoreApplication::libraryPaths() )
+                {
+                        log << "  " << path << Qt::endl;
                 }
 
-                return !image.isNull() || !svg.isEmpty();
+                log << "Supported image formats:";
+                for ( const QByteArray& format : QImageReader::supportedImageFormats() )
+                {
+                        log << " " << format;
+                }
+                log << Qt::endl;
+
+                if ( fileName.isEmpty() )
+                {
+                        log << "Result: empty filename" << Qt::endl << Qt::endl;
+                        return false;
+                }
+
+                QFileInfo fileInfo( fileName );
+
+                if ( fileInfo.isRelative() )
+                {
+                        auto* model = dynamic_cast<Model*>( parent() );
+
+                        QDir::setSearchPaths(
+                                "images",
+                                {
+                                        model ? model->dirPath() : "",
+                                        QDir::currentPath()
+                                } );
+
+                        fileInfo.setFile( QString( "images:" ) + fileName );
+                }
+
+                log << "Resolved path: " << fileInfo.filePath() << Qt::endl;
+                log << "Exists: " << fileInfo.exists() << Qt::endl;
+                log << "Readable: " << fileInfo.isReadable() << Qt::endl;
+                log << "Suffix: " << fileInfo.suffix() << Qt::endl;
+
+                if ( !fileInfo.isReadable() )
+                {
+                        log << "Result: file is not readable"
+                        << Qt::endl
+                        << Qt::endl;
+                        return false;
+                }
+
+                if ( fileInfo.suffix().compare( "svg", Qt::CaseInsensitive ) == 0 )
+                {
+                        QFile file( fileInfo.filePath() );
+
+                        if ( file.open( QFile::ReadOnly ) )
+                        {
+                                svg = file.readAll();
+                                file.close();
+
+                                QSvgRenderer renderer( svg );
+
+                                if ( !renderer.isValid() )
+                                {
+                                        log << "Result: invalid SVG"
+                                        << Qt::endl
+                                        << Qt::endl;
+                                        svg.clear();
+                                        return false;
+                                }
+
+                                log << "Result: SVG loaded successfully"
+                                << Qt::endl
+                                << Qt::endl;
+                                return true;
+                        }
+
+                        log << "Result: SVG could not be opened"
+                        << Qt::endl
+                        << Qt::endl;
+                        return false;
+                }
+
+                QImageReader reader( fileInfo.filePath() );
+
+                /*
+                * Detect the format from the file contents as well as its suffix.
+                * This makes loading more robust for files with unusual or missing
+                * extensions.
+                */
+                reader.setDecideFormatFromContent( true );
+                reader.setAutoTransform( true );
+
+                image = reader.read();
+
+                if ( image.isNull() )
+                {
+                        log << "Detected format: " << reader.format() << Qt::endl;
+                        log << "Reader error code: " << reader.error() << Qt::endl;
+                        log << "Reader error: " << reader.errorString() << Qt::endl;
+                        log << "Result: image decoding failed"
+                        << Qt::endl
+                        << Qt::endl;
+                        return false;
+                }
+
+                log << "Detected format: " << reader.format() << Qt::endl;
+                log << "Image size: "
+                << image.width()
+                << "x"
+                << image.height()
+                << Qt::endl;
+                log << "Result: image loaded successfully"
+                << Qt::endl
+                << Qt::endl;
+
+                return true;
         }
 
 

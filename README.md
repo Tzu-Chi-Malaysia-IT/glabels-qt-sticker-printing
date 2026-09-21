@@ -63,9 +63,15 @@ docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/wor
 # Verify that the correct 64-bit MinGW runtime and JPEG plugin were deployed:
 Get-ChildItem -LiteralPath '.\out\windows-mingw\glabels\glabels' -Recurse -File | Where-Object { $_.Name -in @('glabels-qt.exe','qjpeg.dll','libgcc_s_seh-1.dll','libstdc++-6.dll','libwinpthread-1.dll') } | Select-Object FullName,Length
 
-# update cmakelists and create a complete installed deployment tree under out\windows-mingw\dist:
-docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'rm -rf /workspace/out/windows-mingw/dist && wine C:/Qt/Tools/CMake_64/bin/cmake.exe --install Z:/workspace/out/windows-mingw/glabels --prefix Z:/workspace/out/windows-mingw/dist'
+# update cmakelists and regenerate the build system after replacing both CMakeLists.txt files. This validates the new CMake syntax before rebuilding or installing anything.
+docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'qt-cmake -S Z:/workspace -B Z:/workspace/out/windows-mingw/glabels -G Ninja -DCMAKE_BUILD_TYPE=Release'
 
+
+# Rebuild both application targets so the revised windeployqt post-build rule runs:
+docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'wine C:/Qt/Tools/CMake_64/bin/cmake.exe --build Z:/workspace/out/windows-mingw/glabels --target glabels-qt glabels-batch-qt --parallel'
+
+# Retry installation into a clean deployment directory:
+docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'rm -rf /workspace/out/windows-mingw/dist && wine C:/Qt/Tools/CMake_64/bin/cmake.exe --install Z:/workspace/out/windows-mingw/glabels --prefix Z:/workspace/out/windows-mingw/dist'
 ```
 
 ## Download
