@@ -242,6 +242,7 @@ if (WIN32)
       DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
       DESTINATION bin
       FILES_MATCHING
+        PATTERN "CMakeFiles" EXCLUDE
         PATTERN "*.dll"
         PATTERN "*.qm"
     )
@@ -296,6 +297,7 @@ if (WIN32)
       DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/"
       DESTINATION bin
       FILES_MATCHING
+        PATTERN "CMakeFiles" EXCLUDE
         PATTERN "*.dll"
         PATTERN "*.qm"
     )

@@ -23,7 +23,142 @@ gLabels-qt is the development version of the next major version of gLabels (a.k.
 - Support for continuous-roll labels
 - Many new product templates
 
-## How to build for Windows
+## Build for Windows with Docker
+
+This repository includes a reproducible Docker environment for building the Windows version of gLabels Qt. Qt, MinGW, CMake, Ninja, and Wine run inside Docker. They do not need to be installed directly on Windows.
+
+### Prerequisites
+
+- Windows 10 or Windows 11
+- Git
+- Docker Desktop configured to use Linux containers
+- PowerShell 7 recommended
+
+### Clone the repository
+
+```powershell
+git clone https://github.com/Tzu-Chi-Malaysia-IT/glabels-qt-sticker-printing.git
+```
+
+```powershell
+Set-Location '.\glabels-qt-sticker-printing'
+```
+
+### 1. Build the Windows builder image
+
+```powershell
+docker build --file '.\docker\windows-mingw\Dockerfile' --tag glabels-qt-windows-builder:6.7 .
+```
+
+The builder image contains:
+
+- Qt 6.7.0 for Windows
+- 64-bit MinGW GCC 11.2.0
+- CMake 3.27.7
+- Ninja 1.10.2
+- Wine
+- Windows Qt deployment tools
+
+The base image is pinned by digest in the Dockerfile for reproducible builds.
+
+### 2. Configure the Windows build
+
+```powershell
+docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'qt-cmake -S Z:/workspace -B Z:/workspace/out/windows-mingw/glabels -G Ninja -DCMAKE_BUILD_TYPE=Release'
+```
+
+CMake-generated files are written to:
+
+```text
+out\windows-mingw\glabels
+```
+
+The optional Vulkan, GNU Barcode, qrencode, and Zint messages do not prevent the main application from building.
+
+### 3. Build the applications
+
+```powershell
+docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'wine C:/Qt/Tools/CMake_64/bin/cmake.exe --build Z:/workspace/out/windows-mingw/glabels --target glabels-qt glabels-batch-qt --parallel'
+```
+
+This builds:
+
+```text
+out\windows-mingw\glabels\glabels\glabels-qt.exe
+out\windows-mingw\glabels\glabels-batch\glabels-batch-qt.exe
+```
+
+Only the two application targets are requested. This avoids building unrelated unit-test executables.
+
+A warning about missing `dxcompiler.dll` or `dxil.dll` can be ignored for this Qt Widgets application.
+
+### 4. Create the portable Windows distribution
+
+```powershell
+docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'rm -rf /workspace/out/windows-mingw/dist && wine C:/Qt/Tools/CMake_64/bin/cmake.exe --install Z:/workspace/out/windows-mingw/glabels --prefix Z:/workspace/out/windows-mingw/dist'
+```
+
+The portable application is created under:
+
+```text
+out\windows-mingw\dist
+```
+
+The installed tree includes:
+
+- `bin\glabels-qt.exe`
+- `bin\glabels-batch-qt.exe`
+- Qt runtime DLLs
+- 64-bit MinGW runtime DLLs
+- Qt platform and image-format plugins
+- JPEG, GIF, ICO, SVG, and PNG support
+- Product templates
+- Application translations
+- Icons and metadata
+
+### 5. Run gLabels
+
+```powershell
+& '.\out\windows-mingw\dist\bin\glabels-qt.exe'
+```
+
+Keep the complete `out\windows-mingw\dist` directory together. The application uses resources stored under its `share\glabels-qt` directory.
+
+### Rebuild after changing source code
+
+Run the build command again:
+
+```powershell
+docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'wine C:/Qt/Tools/CMake_64/bin/cmake.exe --build Z:/workspace/out/windows-mingw/glabels --target glabels-qt glabels-batch-qt --parallel'
+```
+
+Then recreate the portable distribution:
+
+```powershell
+docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'rm -rf /workspace/out/windows-mingw/dist && wine C:/Qt/Tools/CMake_64/bin/cmake.exe --install Z:/workspace/out/windows-mingw/glabels --prefix Z:/workspace/out/windows-mingw/dist'
+```
+
+### Clean rebuild
+
+Delete all generated Windows build output:
+
+```powershell
+Remove-Item -LiteralPath '.\out\windows-mingw' -Recurse -Force
+```
+
+Then repeat the configure, build, and install steps.
+
+### JPEG and other image formats
+
+The Windows deployment includes Qt image-format plugins under:
+
+```text
+out\windows-mingw\dist\bin\imageformats
+```
+
+This includes `qjpeg.dll`, `qgif.dll`, `qico.dll`, and `qsvg.dll`.
+
+gLabels loads its checkerboard placeholder lazily after `QApplication` initializes. This prevents Qt's image-format system from initializing before the Windows plugin paths are available.
 
 ## Fixed jpeg not loaded up issue
 
