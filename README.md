@@ -59,6 +59,13 @@ Get-ChildItem -LiteralPath '.\out\windows-mingw\glabels\glabels' -Recurse -File 
 # Update only the MinGW deployment block so windeployqt deploys the correct 64-bit runtime automatically, then remove the incorrect hardcoded libgcc_s_dw2-1.dll block:
 # glabels/CMakeLists.txt
 docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'rm -f /workspace/out/windows-mingw/glabels/glabels/glabels-qt.exe && wine C:/Qt/Tools/CMake_64/bin/cmake.exe --build Z:/workspace/out/windows-mingw/glabels --target glabels-qt --parallel'
+
+# Verify that the correct 64-bit MinGW runtime and JPEG plugin were deployed:
+Get-ChildItem -LiteralPath '.\out\windows-mingw\glabels\glabels' -Recurse -File | Where-Object { $_.Name -in @('glabels-qt.exe','qjpeg.dll','libgcc_s_seh-1.dll','libstdc++-6.dll','libwinpthread-1.dll') } | Select-Object FullName,Length
+
+# update cmakelists and create a complete installed deployment tree under out\windows-mingw\dist:
+docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'rm -rf /workspace/out/windows-mingw/dist && wine C:/Qt/Tools/CMake_64/bin/cmake.exe --install Z:/workspace/out/windows-mingw/glabels --prefix Z:/workspace/out/windows-mingw/dist'
+
 ```
 
 ## Download
