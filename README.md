@@ -1,4 +1,4 @@
-> [!IMPORTANT]\
+> [!IMPORTANT]
 > DO NOT SYNC FROM UPSTREAM!!!!!
 > This repo is for _glabels-qt_, NOT the legacy _glabels-3_ version (which I have not maintained since 2018).
 
@@ -22,6 +22,13 @@ gLabels-qt is the development version of the next major version of gLabels (a.k.
 - User-defined variables
 - Support for continuous-roll labels
 - Many new product templates
+
+## How to use gLabels-qt
+
+> [!important]
+> Please refer to the [User Manual](UserManual.md) for instructions.
+
+## How to create a template for gLabels-qt
 
 ## Build for Windows with Docker
 
