@@ -57,8 +57,8 @@ docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/wor
 Get-ChildItem -LiteralPath '.\out\windows-mingw\glabels\glabels' -Recurse -File | Where-Object { $_.Name -in @('glabels-qt.exe','qjpeg.dll','Qt6Core.dll','Qt6Gui.dll','libgcc_s_seh-1.dll','libstdc++-6.dll','libwinpthread-1.dll') } | Select-Object FullName,Length
 
 # Update only the MinGW deployment block so windeployqt deploys the correct 64-bit runtime automatically, then remove the incorrect hardcoded libgcc_s_dw2-1.dll block:
-$file='.\glabels\CMakeLists.txt'; $text=Get-Content -LiteralPath $file -Raw; $mingwStart=$text.IndexOf('    if (MINGW)'); $mingwEnd=$text.IndexOf('    endif (MINGW)', $mingwStart); if ($mingwStart -lt 0 -or $mingwEnd -lt 0) { throw 'MinGW deployment block not found.' }; $before=$text.Substring(0,$mingwStart); $block=$text.Substring($mingwStart,$mingwEnd-$mingwStart); $after=$text.Substring($mingwEnd); $block=$block.Replace("                    --no-compiler-runtime`r`n",''); $block=[regex]::Replace($block,'(?ms)\r?\n\s*# Install necessary system libraries\s*\r?\n\s*install \(FILES\s*\r?\n\s*\$\{QT_BIN_DIR\}/libgcc_s_dw2-1\.dll\s*\r?\n\s*\$\{QT_BIN_DIR\}/libstdc\+\+-6\.dll\s*\r?\n\s*\$\{QT_BIN_DIR\}/libwinpthread-1\.dll\s*\r?\n\s*DESTINATION bin\s*\r?\n\s''); Set-Content -LiteralPath $file -Value ($before+$block+$after) -Encoding utf8
-
+# glabels/CMakeLists.txt
+docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'rm -f /workspace/out/windows-mingw/glabels/glabels/glabels-qt.exe && wine C:/Qt/Tools/CMake_64/bin/cmake.exe --build Z:/workspace/out/windows-mingw/glabels --target glabels-qt --parallel'
 ```
 
 ## Download

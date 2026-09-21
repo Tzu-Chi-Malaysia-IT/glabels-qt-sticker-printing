@@ -203,7 +203,6 @@ if (WIN32)
                 env PATH="${QT_BIN_DIR}" "${WINDEPLOYQT_EXECUTABLE}"
                     --verbose 0
                     --release
-                    --no-compiler-runtime
                     --no-opengl-sw
                     \"$<TARGET_FILE:glabels-qt>\"
         )
@@ -212,13 +211,6 @@ if (WIN32)
         install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/ DESTINATION bin
                  FILES_MATCHING PATTERN *.dll PATTERN *.qm)
 
-        # Install necessary system libraries
-        install (FILES
-            ${QT_BIN_DIR}/libgcc_s_dw2-1.dll
-            ${QT_BIN_DIR}/libstdc++-6.dll
-            ${QT_BIN_DIR}/libwinpthread-1.dll
-            DESTINATION bin
-        )
         if (ZLIB_FOUND)
           install (FILES ${MINGW_BIN_DIR}/zlib1.dll DESTINATION bin)
         endif ()
