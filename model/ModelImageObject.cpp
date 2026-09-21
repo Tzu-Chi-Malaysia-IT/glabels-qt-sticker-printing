@@ -422,6 +422,10 @@ namespace glabels::model
                         // Render default place holder image
                         //
                         painter->save();
+                        if ( smDefaultImage.isNull() )
+                        {
+                                smDefaultImage.load( ":images/checkerboard.png" );
+                        }
                         painter->setRenderHint( QPainter::SmoothPixmapTransform, false );
                         painter->drawImage( destRect, smDefaultImage );
                         painter->restore();
