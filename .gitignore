@@ -40,3 +40,7 @@ TEST-DATA
 SAV*
 OLD*
 
+
+# Local Visual Studio files
+.vs/
+out/
