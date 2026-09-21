@@ -75,6 +75,12 @@ docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/wor
 
 # rebuild only the affected application target. CMake will recompile ModelImageObject.cpp, relink glabels-qt.exe, and rerun deployment. --parallel is supported by CMake’s build mode and delegates parallelism to Ninja
 docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'wine C:/Qt/Tools/CMake_64/bin/cmake.exe --build Z:/workspace/out/windows-mingw/glabels --target glabels-qt --parallel'
+
+# refresh the deployment directory after the rebuild, to verify that the correct 64-bit MinGW runtime and JPEG plugin were deployed:
+docker run --rm --mount "type=bind,source=$((Resolve-Path '.').Path),target=/workspace" glabels-qt-windows-builder:6.7 sh -lc 'rm -rf /workspace/out/windows-mingw/dist && wine C:/Qt/Tools/CMake_64/bin/cmake.exe --install Z:/workspace/out/windows-mingw/glabels --prefix Z:/workspace/out/windows-mingw/dist'
+
+# launch the refreshed installed executable and inspect glabels-image-loader.log.
+
 ```
 
 ## Download
