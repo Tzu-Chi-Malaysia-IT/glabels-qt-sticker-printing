@@ -25,16 +25,11 @@
 #include "Size.hpp"
 
 #include <QBrush>
-#include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
-#include <QFile>
 #include <QFileInfo>
 #include <QImage>
-#include <QImageReader>
 #include <QPen>
-#include <QPluginLoader>
-#include <QTextStream>
 
 
 //
@@ -57,7 +52,6 @@ namespace glabels::model
         /// Static data
         ///
         QImage ModelImageObject::smDefaultImage;
-
 
         ///
         /// Constructor
@@ -419,13 +413,18 @@ namespace glabels::model
                 if ( inEditor && (mFilenameNode.isField() || (mImage.isNull() && mSvg.isEmpty()) ) )
                 {
                         //
-                        // Render default place holder image
+                        // Load the placeholder after QApplication has initialized
+                        // Qt's dynamic image-format plugin system.
                         //
-                        painter->save();
                         if ( smDefaultImage.isNull() )
                         {
                                 smDefaultImage.load( ":images/checkerboard.png" );
                         }
+
+                        //
+                        // Render default place holder image
+                        //
+                        painter->save();
                         painter->setRenderHint( QPainter::SmoothPixmapTransform, false );
                         painter->drawImage( destRect, smDefaultImage );
                         painter->restore();
@@ -569,251 +568,47 @@ namespace glabels::model
                                               QImage&        image,
                                               QByteArray&    svg ) const
         {
-                image = QImage();
+                image = QImage(); // clear
                 svg.clear();
 
-                const QString logPath =
-                        QCoreApplication::applicationDirPath()
-                        + "/glabels-image-loader.log";
-
-                QFile logFile( logPath );
-                const bool logOpened =
-                        logFile.open(
-                                QFile::WriteOnly
-                                | QFile::Append
-                                | QFile::Text );
-
-                QTextStream log( &logFile );
-
-                if ( logOpened )
+                if ( !fileName.isEmpty() )
                 {
-                        log << "Requested image: "
-                            << fileName
-                            << Qt::endl;
-
-                        log << "Application directory: "
-                            << QCoreApplication::applicationDirPath()
-                            << Qt::endl;
-
-                        log << "Qt plugin paths:"
-                            << Qt::endl;
-
-                        for ( const QString& path :
-                              QCoreApplication::libraryPaths() )
+                        QFileInfo fileInfo( fileName );
+                        if ( fileInfo.isRelative() )
                         {
-                                log << "  "
-                                    << path
-                                    << Qt::endl;
+                                // Look for image file relative to project file 1st then CWD 2nd
+                                auto* model = dynamic_cast<Model*>( parent() );
+                                QDir::setSearchPaths( "images", {model ? model->dirPath() : "", QDir::currentPath()} );
+                                fileInfo.setFile( QString("images:") + fileName );
                         }
 
-                        const QString jpegPluginPath =
-                                QCoreApplication::applicationDirPath()
-                                + "/imageformats/qjpeg.dll";
-
-                        log << "JPEG plugin path: "
-                            << jpegPluginPath
-                            << Qt::endl;
-
-                        log << "JPEG plugin exists: "
-                            << QFileInfo::exists( jpegPluginPath )
-                            << Qt::endl;
-
-                        QPluginLoader jpegPluginLoader(
-                                jpegPluginPath );
-
-                        QObject* jpegPluginInstance =
-                                jpegPluginLoader.instance();
-
-                        log << "JPEG plugin loaded: "
-                            << (jpegPluginInstance != nullptr)
-                            << Qt::endl;
-
-                        log << "JPEG plugin error: "
-                            << jpegPluginLoader.errorString()
-                            << Qt::endl;
-
-                        log << "Supported image formats:";
-
-                        for ( const QByteArray& format :
-                              QImageReader::supportedImageFormats() )
+                        if ( fileInfo.isReadable() )
                         {
-                                log << " "
-                                    << format;
-                        }
-
-                        log << Qt::endl;
-                }
-
-                if ( fileName.isEmpty() )
-                {
-                        if ( logOpened )
-                        {
-                                log << "Result: empty filename"
-                                    << Qt::endl
-                                    << Qt::endl;
-                        }
-
-                        return false;
-                }
-
-                QFileInfo fileInfo( fileName );
-
-                if ( fileInfo.isRelative() )
-                {
-                        auto* model =
-                                dynamic_cast<Model*>( parent() );
-
-                        QDir::setSearchPaths(
-                                "images",
+                                if ( fileInfo.suffix().toLower() == "svg" )
                                 {
-                                        model
-                                                ? model->dirPath()
-                                                : "",
-                                        QDir::currentPath()
-                                } );
-
-                        fileInfo.setFile(
-                                QString( "images:" )
-                                + fileName );
-                }
-
-                if ( logOpened )
-                {
-                        log << "Resolved path: "
-                            << fileInfo.filePath()
-                            << Qt::endl;
-
-                        log << "Exists: "
-                            << fileInfo.exists()
-                            << Qt::endl;
-
-                        log << "Readable: "
-                            << fileInfo.isReadable()
-                            << Qt::endl;
-
-                        log << "Suffix: "
-                            << fileInfo.suffix()
-                            << Qt::endl;
-                }
-
-                if ( !fileInfo.isReadable() )
-                {
-                        if ( logOpened )
-                        {
-                                log << "Result: file is not readable"
-                                    << Qt::endl
-                                    << Qt::endl;
-                        }
-
-                        return false;
-                }
-
-                if ( fileInfo.suffix().compare(
-                             "svg",
-                             Qt::CaseInsensitive ) == 0 )
-                {
-                        QFile file( fileInfo.filePath() );
-
-                        if ( !file.open( QFile::ReadOnly ) )
-                        {
-                                if ( logOpened )
-                                {
-                                        log << "Result: SVG could not be opened"
-                                            << Qt::endl
-                                            << Qt::endl;
+                                        QFile file( fileInfo.filePath() );
+                                        if ( file.open( QFile::ReadOnly ) )
+                                        {
+                                                svg = file.readAll();
+                                                file.close();
+                                                QSvgRenderer renderer( svg );
+                                                if ( !renderer.isValid() )
+                                                {
+                                                        svg.clear();
+                                                }
+                                        }
                                 }
-
-                                return false;
-                        }
-
-                        svg = file.readAll();
-                        file.close();
-
-                        QSvgRenderer renderer( svg );
-
-                        if ( !renderer.isValid() )
-                        {
-                                svg.clear();
-
-                                if ( logOpened )
+                                else
                                 {
-                                        log << "Result: invalid SVG"
-                                            << Qt::endl
-                                            << Qt::endl;
+                                        image = QImage( fileInfo.filePath() );
                                 }
-
-                                return false;
                         }
-
-                        if ( logOpened )
-                        {
-                                log << "Result: SVG loaded successfully"
-                                    << Qt::endl
-                                    << Qt::endl;
-                        }
-
-                        return true;
                 }
 
-                QImageReader reader( fileInfo.filePath() );
-
-                /*
-                 * Detect the format from the file contents as well as
-                 * the filename extension.
-                 */
-                reader.setDecideFormatFromContent( true );
-
-                /*
-                 * Apply image orientation metadata, including JPEG EXIF
-                 * orientation information.
-                 */
-                reader.setAutoTransform( true );
-
-                image = reader.read();
-
-                if ( image.isNull() )
-                {
-                        if ( logOpened )
-                        {
-                                log << "Detected format: "
-                                    << reader.format()
-                                    << Qt::endl;
-
-                                log << "Reader error code: "
-                                    << reader.error()
-                                    << Qt::endl;
-
-                                log << "Reader error: "
-                                    << reader.errorString()
-                                    << Qt::endl;
-
-                                log << "Result: image decoding failed"
-                                    << Qt::endl
-                                    << Qt::endl;
-                        }
-
-                        return false;
-                }
-
-                if ( logOpened )
-                {
-                        log << "Detected format: "
-                            << reader.format()
-                            << Qt::endl;
-
-                        log << "Image size: "
-                            << image.width()
-                            << "x"
-                            << image.height()
-                            << Qt::endl;
-
-                        log << "Result: image loaded successfully"
-                            << Qt::endl
-                            << Qt::endl;
-                }
-
-                return true;
+                return !image.isNull() || !svg.isEmpty();
         }
+
+
         ///
         /// Create shadow image
         ///
